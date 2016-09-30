@@ -1,0 +1,82 @@
+---
+title: 'Script: forage'
+author: "Chan Ju Ping"
+date: "30 September 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, results = "hide", warning = FALSE, eval = F)
+```
+
+## Chi-square tests between two environments
+
+The setup uses a robot spider chasing a mouse that randomly moves about the field. These fields are differentiated by one without obstructions and a second with obstuctions, thus termed as having a habitat and without a habitat.
+
+Success and failure in capture are to be recorded directly into this document in RStudio. A plot will then be generated based on the data with the p-value on the y-axis and the number of runs on the x-axis. We expect the p-value to decrease as the number of runs increases.
+
+Data is to be logged sequentially with "1" used to represent occurences in each category. The four categories used are captured in habitat, not captured in habitat, captured without habitat, and not-captured without habitat.
+
+The script will log a running count of the p-values in association with each run. It is therefore important that the logger does not rerun the script should there be no new input to the dataset. If the script is executed although there are no new data, a warning message will print "The number of runs does not match the number of times the p-value was calculated!"
+
+The observer must then doublecheck the data to ensure each occurrence is logged, and most of the time, this means the latest value was not added to the dataset. To ease debugging, no additional log will take place as long as the number of runs (including the current run) does not match the number of p-values generated.
+
+```{r init}
+pval.dat = NA
+N.runs = 0
+```
+
+```{r data}
+cap.habitat = c(0) # Captured with habitat. When filled in should look like c(1, 1, 1, 1)
+no.cap.habitat = c(0) # Not captured with habitat
+cap.no.habitat = c(0) # Captured without habitat
+no.cap.no.habitat = c(0) # Not captured without habitat
+
+capture = c(sum(cap.habitat), sum(cap.no.habitat))
+no.capture = c(sum(no.cap.habitat), sum(no.cap.no.habitat))
+
+dat.table = rbind(
+  capture,
+  no.capture
+)
+
+(N.runs = sum(
+  capture,
+  no.capture
+))
+
+if (
+  (N.runs) == length(pval.dat) 
+) pval.dat = 
+  append(
+    pval.dat,
+    chisq.test(dat.table)$p.value
+  ) else
+    print("The number of runs does not match the number of times the p-value was calculated!")
+
+```
+
+## Plots
+
+The following will create a simple plot using ggplot2. The script will also evaluate whether the last value in the pval.dat vector contains NA's. If they do, the plot will not be constructed, and an error message will be displayed in the R console saying "Not enough data to generate graph!" until a value finally appears.
+
+```{r plot.package}
+require(ggplot2)
+```
+
+```{r plot.dat}
+plot.dat = data.frame(
+  runs = seq.int(from = 1, to = N.runs),
+  p.val = pval.dat[-1]
+)
+
+if (tail(pval.dat, 1) == "NaN")
+  print("Not enough data to generate graph!") else
+ggplot(data = plot.dat,
+       aes(x = runs,
+           y = p.val)) +
+  geom_point() +
+  xlab("Number of runs") +
+  ylab("p-value") +
+  ggtitle("Change in p-value with increasing number of runs")
+```
